@@ -2,29 +2,29 @@
 #include <pthread.h>
 
 
-typedef struct{
-    int value;
+typedef struct {
+    unsigned int value; /* can't be negative */
     queue_t *q;
 } semaphore, sem_t;
 
-typedef struct{
+typedef struct {
     int id;
     int priority;
     int arrival;
     sem_t personal_sem;
-} Student;
+} student_t;
 
-typedef struct{
+typedef struct {
     int id;
     int arrival;
     sem_t personal_sem;
-} Tutor;
+} tutor_t;
 
 int main(int argc, char* argv[])
 {
     if (argc != 5)
     {
-        printf("improper arguments");
+        printf("improper arguments\n");
         return -1;
 
     }
@@ -35,7 +35,7 @@ int main(int argc, char* argv[])
         printf("%s", argv[i]);
     }
 
-    return 1;
+    return 0;
 
 }
 
