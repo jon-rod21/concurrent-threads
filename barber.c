@@ -4,35 +4,32 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-typedef struct{
-    int *customers;
-    int front;
-    int rear;
-    int size;
-    int maxSize;
-} queue_t;
 
-queue_t* create(int maxSize)
+typedef struct pq_data{
+    int student_id;
+    int priority;
+    int arrival_order;
+    struct pq_data *next;
+} pq_data;
+
+
+
+typedef struct{
+    pq_data *head;
+    int size;
+    int next_arrival;
+} pq_t;
+
+pq_t* create()
 {
-    queue_t *q = (queue_t*)malloc(sizeof(queue_t));
+    pq_t *q = (pq_t*)malloc(sizeof(pq_t));
     if (q == NULL)
     {
         fprintf(stderr, "Failed to allocate queue");
         exit(1);
     }
 
-    q->customers = (int*)malloc(maxSize * sizeof(int*));
-    if (q->customers == NULL)
-    {
-        fprintf(stderr, "Failed to allocate array");
-        free(q);
-        exit(1);
-    }
 
-    q->front = 0;
-    q->rear = -1;
-    q->maxSize = maxSize;
-    q->size = 0; 
 
     return q;
 }
