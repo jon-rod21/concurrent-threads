@@ -321,7 +321,7 @@ void* student_thread(void *arg)
 
     for (int help = 0; help < help_needed; help++)
     {
-        nano_sleep(rand_r(&seed) % 5001);
+        nano_sleep(rand_r(&seed) % 2001);
 
         pthread_mutex_lock(&chairs_mut);
         if (available_chairs > 0)
