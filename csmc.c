@@ -29,6 +29,16 @@ typedef struct{
     int size;
 } tutor_t;
 
+
+void nano_sleep(long m_sec)
+{
+    struct timespec ts;
+    ts.tv_sec = m_sec / 1000000;
+    ts.tv_nsec = (m_sec % 1000000) * 1000;
+    nanosleep(&ts, NULL);
+}
+
+
 pq_t *waiting_students;
 tutor_t *available_tutors;
 
@@ -243,7 +253,7 @@ void* coordinator_thread(void *arg)
         while (tq_isEmpty(available_tutors))
         {
             pthread_mutex_unlock(&tutor_mut);
-            sleep(2);
+            nano_sleep(100);
             pthread_mutex_lock(&tutor_mut);
         }
         int tutor_id = tq_dequeue(available_tutors);
@@ -293,7 +303,7 @@ void* tutor_thread (void *arg)
         printf("T: Student %d tutored by Tutor %d. Total sessions being tutored = %d. Total sessions tutored by all = %d.\n", student_id, tutor_id, current_active, total_tutored);
         pthread_mutex_unlock(&print_mut);
 
-        sleep(3);
+        nano_sleep(200);
 
         pthread_mutex_lock(&stats_mut);
         active_tutoring_sessions--;
@@ -311,7 +321,7 @@ void* student_thread(void *arg)
 
     for (int help = 0; help < help_needed; help++)
     {
-        sleep(rand_r(&seed) % 3);
+        nano_sleep(rand_r(&seed) % 5001);
 
         pthread_mutex_lock(&chairs_mut);
         if (available_chairs > 0)
@@ -354,7 +364,7 @@ void* student_thread(void *arg)
             printf("S: Student %d receives help from Tutor.\n", student_id);
             pthread_mutex_unlock(&print_mut);
 
-            sleep(2);
+            nano_sleep(200);
 
             student_help_count[student_id]++;
 
