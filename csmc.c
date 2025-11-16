@@ -3,7 +3,7 @@
 #include <semaphore.h>
 #include <stdlib.h>
 #include <unistd.h>
-
+#include <time.h>
 
 typedef struct pq_node{
     int student_id;
@@ -243,7 +243,7 @@ void* coordinator_thread(void *arg)
         while (tq_isEmpty(available_tutors))
         {
             pthread_mutex_unlock(&tutor_mut);
-            sleep(5);
+            sleep(2);
             pthread_mutex_lock(&tutor_mut);
         }
         int tutor_id = tq_dequeue(available_tutors);
@@ -293,7 +293,7 @@ void* tutor_thread (void *arg)
         printf("T: Student %d tutored by Tutor %d. Total sessions being tutored = %d. Total sessions tutored by all = %d.\n", student_id, tutor_id, current_active, total_tutored);
         pthread_mutex_unlock(&print_mut);
 
-        sleep(7);
+        sleep(3);
 
         pthread_mutex_lock(&stats_mut);
         active_tutoring_sessions--;
@@ -311,7 +311,7 @@ void* student_thread(void *arg)
 
     for (int help = 0; help < help_needed; help++)
     {
-        sleep(rand_r(&seed) % 2001);
+        sleep(rand_r(&seed) % 3);
 
         pthread_mutex_lock(&chairs_mut);
         if (available_chairs > 0)
@@ -354,7 +354,7 @@ void* student_thread(void *arg)
             printf("S: Student %d receives help from Tutor.\n", student_id);
             pthread_mutex_unlock(&print_mut);
 
-            sleep(6);
+            sleep(2);
 
             student_help_count[student_id]++;
 
