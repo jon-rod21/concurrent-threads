@@ -5,25 +5,30 @@
 #include <unistd.h>
 #include <time.h>
 
-typedef struct pq_node{
+#define COMPLETE_TUTORING -2
+#define INVALID_ID -1
+#define TUTORING_TIME 200
+#define STUDENT_RETRY 2000
+
+typedef struct pq_node {
     int student_id;
     int priority;
     int arrival_order;
     struct pq_node *next;
 } pq_node;
 
-typedef struct{
+typedef struct {
     pq_node *head;
     int size;
     int next_arrival;
 } pq_t;
 
-typedef struct tutor_node{
+typedef struct tutor_node {
     int tutor_id;
     struct tutor_node *next;
 } tutor_node; 
 
-typedef struct{
+typedef struct {
     tutor_node *head;
     tutor_node *tail;
     int size;
@@ -119,7 +124,7 @@ int pq_dequeue(pq_t *pq)
 {
     if (pq->head == NULL)
     {
-        return -1;
+        return INVALID_ID;
     }
 
     pq_node *temp = pq->head;
@@ -180,7 +185,7 @@ int tq_dequeue(tutor_t *tq)
 {
     if (tq->head == NULL)
     {
-        return -1;
+        return INVALID_ID;
     }
     
     tutor_node *temp = tq->head;
@@ -215,7 +220,7 @@ void tq_free(tutor_t *tq)
 
 void* coordinator_thread(void *arg)
 {
-    (void)arg;
+	(void)arg;
 
     while (1)
     {
@@ -229,7 +234,7 @@ void* coordinator_thread(void *arg)
 
             for (int i = 0; i < num_tutors; i++)
             {
-                tutor_current_student[i] = -2;
+                tutor_current_student[i] = COMPLETE_TUTORING;
                 sem_post(&tutor_assigned[i]);
             }
             break;
@@ -244,7 +249,7 @@ void* coordinator_thread(void *arg)
         int student_id = pq_dequeue(waiting_students);
         pthread_mutex_unlock(&student_mut);
 
-        if (student_id == -1)
+        if (student_id == INVALID_ID)
         {
             continue;
         }
@@ -280,7 +285,7 @@ void* tutor_thread (void *arg)
 
         int student_id = tutor_current_student[tutor_id];
 
-        if(student_id == -2)
+        if(student_id == COMPLETE_TUTORING)
         {
             break;
         }
@@ -303,7 +308,7 @@ void* tutor_thread (void *arg)
         printf("T: Student %d tutored by Tutor %d. Total sessions being tutored = %d. Total sessions tutored by all = %d.\n", student_id, tutor_id, current_active, total_tutored);
         pthread_mutex_unlock(&print_mut);
 
-        nano_sleep(200);
+        nano_sleep(TUTORING_TIME);
 
         pthread_mutex_lock(&stats_mut);
         active_tutoring_sessions--;
@@ -324,52 +329,7 @@ void* student_thread(void *arg)
         nano_sleep(rand_r(&seed) % 2001);
 
         pthread_mutex_lock(&chairs_mut);
-        if (available_chairs > 0)
-        {
-            available_chairs--;
-            int chairs_left = available_chairs;
-            pthread_mutex_unlock(&chairs_mut);
-
-            pthread_mutex_lock(&print_mut);
-            printf("S: Student %d takes a seat. Empty chairs remaining = %d.\n", student_id, chairs_left);
-            pthread_mutex_unlock(&print_mut);
-
-            pthread_mutex_lock(&student_mut);
-            int priority = student_help_count[student_id] + 1;
-            pq_enqueue(waiting_students, student_id, priority);
-            int waiting = waiting_students->size;
-
-            pthread_mutex_lock(&stats_mut);
-            total_help_requested++;
-            int total_requests = total_help_requested;
-            pthread_mutex_unlock(&stats_mut);
-
-            pthread_mutex_unlock(&student_mut);
-            
-            pthread_mutex_lock(&print_mut);
-            printf("C: Student %d with priority %d in queue. Waiting students = %d. Total help requested so far %d.\n", student_id, priority, waiting, total_requests);
-            pthread_mutex_unlock(&print_mut);
-
-
-            sem_post(&student_arrived);
-
-            sem_wait(&student_ready[student_id]);
-
-            pthread_mutex_lock(&chairs_mut);
-            available_chairs++;
-            pthread_mutex_unlock(&chairs_mut);
-            
-
-            pthread_mutex_lock(&print_mut);
-            printf("S: Student %d receives help from Tutor.\n", student_id);
-            pthread_mutex_unlock(&print_mut);
-
-            nano_sleep(200);
-
-            student_help_count[student_id]++;
-
-        }
-        else
+        if (available_chairs <= 0)
         {
             pthread_mutex_unlock(&chairs_mut);
 
@@ -378,8 +338,50 @@ void* student_thread(void *arg)
             pthread_mutex_unlock(&print_mut);
 
             help--;
+		}
+        available_chairs--;
+        int chairs_left = available_chairs;
+        pthread_mutex_unlock(&chairs_mut);
+
+        pthread_mutex_lock(&print_mut);
+        printf("S: Student %d takes a seat. Empty chairs remaining = %d.\n", student_id, chairs_left);
+        pthread_mutex_unlock(&print_mut);
+
+        pthread_mutex_lock(&student_mut);
+        int priority = student_help_count[student_id] + 1;
+        pq_enqueue(waiting_students, student_id, priority);
+        int waiting = waiting_students->size;
+
+        pthread_mutex_lock(&stats_mut);
+        total_help_requested++;
+        int total_requests = total_help_requested;
+        pthread_mutex_unlock(&stats_mut);
+
+        pthread_mutex_unlock(&student_mut);
+        
+        pthread_mutex_lock(&print_mut);
+        printf("C: Student %d with priority %d in queue. Waiting students = %d. Total help requested so far %d.\n", student_id, priority, waiting, total_requests);
+        pthread_mutex_unlock(&print_mut);
+
+
+        sem_post(&student_arrived);
+
+        sem_wait(&student_ready[student_id]);
+
+        pthread_mutex_lock(&chairs_mut);
+        available_chairs++;
+        pthread_mutex_unlock(&chairs_mut);
+        
+
+        pthread_mutex_lock(&print_mut);
+        printf("S: Student %d receives help from Tutor.\n", student_id);
+        pthread_mutex_unlock(&print_mut);
+
+        nano_sleep(200);
+
+        student_help_count[student_id]++;
+
         }
-    }
 
     pthread_mutex_lock(&stats_mut);
     students_finished++;
@@ -428,7 +430,7 @@ int main(int argc, char* argv[])
     for (int i = 0; i < num_tutors; i++)
     {
         sem_init(&tutor_assigned[i], 0, 0);
-        tutor_current_student[i] = -1;
+        tutor_current_student[i] = INVALID_ID;
     }
 
     sem_init(&student_arrived, 0, 0);
