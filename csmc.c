@@ -55,6 +55,7 @@ sem_t *student_ready;
 
 int *student_help_count;
 int *tutor_current_student;
+int *student_current_tutor;
 int available_chairs;
 int num_chairs;
 int num_students;
@@ -291,6 +292,7 @@ void* tutor_thread (void *arg)
             continue;
         }
 
+        student_current_tutor[student_id] = tutor_id;
         sem_post(&student_ready[student_id]);
 
         pthread_mutex_lock(&stats_mut);
@@ -348,7 +350,7 @@ void* student_thread(void *arg)
             pthread_mutex_unlock(&student_mut);
             
             pthread_mutex_lock(&print_mut);
-            printf("C: Student %d with priority %d in queue. Waiting students = %d. Total help requested so far %d.\n", student_id, priority, waiting, total_requests);
+            printf("C: Student %d with priority %d in queue. Waiting students = %d. Total help requested so far = %d.\n", student_id, priority, waiting, total_requests);
             pthread_mutex_unlock(&print_mut);
 
 
@@ -360,9 +362,10 @@ void* student_thread(void *arg)
             available_chairs++;
             pthread_mutex_unlock(&chairs_mut);
             
+            int my_tutor = student_current_tutor[student_id];
 
             pthread_mutex_lock(&print_mut);
-            printf("S: Student %d receives help from Tutor.\n", student_id);
+            printf("S: Student %d receives help from Tutor %d.\n", student_id, my_tutor);
             pthread_mutex_unlock(&print_mut);
 
             nano_sleep(200);
@@ -418,6 +421,7 @@ int main(int argc, char* argv[])
     available_tutors = createTQ();
     student_help_count = (int*)calloc(num_students, sizeof(int));
     tutor_current_student = (int*)malloc(num_tutors * sizeof(int));
+    student_current_tutor = (int*)malloc(num_students * sizeof(int));
     student_ready = (sem_t*)malloc(num_students * sizeof(sem_t));
     tutor_assigned = (sem_t*)malloc(num_tutors * sizeof(sem_t));
 
@@ -476,6 +480,7 @@ int main(int argc, char* argv[])
     tq_free(available_tutors);
     free(student_help_count);
     free(tutor_current_student);
+    free(student_current_tutor);
     free(student_ready);
     free(tutor_assigned);
     free(tutors);
