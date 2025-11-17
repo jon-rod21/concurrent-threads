@@ -92,6 +92,7 @@ void pq_enqueue(pq_t *pq, int student_id, int priority)
     new_node->next = NULL;
     
     if (pq->head == NULL || 
+            pq->head->priority > priority ||
             (pq->head->priority == priority && pq->head->arrival_order >
              new_node->arrival_order))
     {
